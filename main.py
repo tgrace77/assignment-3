@@ -51,7 +51,7 @@ async def query_openai(request: QueryRequest):
             messages=[
                 {
                     "role": "user",
-                    "content": "Say this is a test",
+                    "content": request.prompt,
                 }
             ],
             model="gpt-3.5-turbo",
