@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Chatbot</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
+</head>
+<body>
+    <h1>Data Chatbot</h1>
+    <div id="file-upload">
+        <input type="file" id="csvFileInput" accept=".csv" />
+        <p id="file-error" style="color: red;"></p>
+        <div id="data-preview"></div>
+    </div>
+    <div id="chat-interface">
+        <textarea id="user-query" placeholder="Ask a question about the dataset..."></textarea>
+        <button id="send-query">Send</button>
+        <div id="chat-response"></div>
+    </div>
+    <div id="chart-container"></div>
+    <script src="script.js"></script>
+</body>
+</html>
