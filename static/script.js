@@ -43,7 +43,7 @@ function previewData(data) {
         table.appendChild(thead);
 
         const tbody = document.createElement('tbody');
-        data.slice(0, 5).forEach(row => {
+        data.forEach(row => {
             const tr = document.createElement('tr');
             Object.values(row).forEach(val => {
                 const td = document.createElement('td');
@@ -73,8 +73,16 @@ function togglePreview() {
 // Event listener for the 'Send' button to process the user query
 document.getElementById('send-query').addEventListener('click', async function() {
     const query = document.getElementById('user-query').value;
+    const chatHistory = document.getElementById('chat-history');
+
+    // Append user query to chat history
+    chatHistory.innerHTML += `<p><strong>User:</strong> ${query}</p>`;
+    chatHistory.scrollTop = chatHistory.scrollHeight;
+
     if (!dataset) {
         alert('Please upload a dataset first.');
+        chatHistory.innerHTML += `<p><strong>System:</strong> Please upload a dataset first.</p>`;
+        chatHistory.scrollTop = chatHistory.scrollHeight;
         return;
     }
 
@@ -84,7 +92,10 @@ document.getElementById('send-query').addEventListener('click', async function()
     // Pre-check for question relevance
     const isRelevant = columns.some(col => query.toLowerCase().includes(col.toLowerCase()));
     if (!isRelevant) {
-        alert('Your question does not seem to be related to the dataset columns. Please refine your question.');
+        const message = 'Your question does not seem to be related to the dataset columns. Please refine your question.';
+        alert(message);
+        chatHistory.innerHTML += `<p><strong>System:</strong> ${message}</p>`;
+        chatHistory.scrollTop = chatHistory.scrollHeight;
         return;
     }
 
@@ -102,7 +113,7 @@ document.getElementById('send-query').addEventListener('click', async function()
         });
 
         const result = await response.json();
-        
+
         // Check if the response is empty or undefined
         if (!result || !result.response) {
             throw new Error('Received an empty or invalid response from the server.');
@@ -121,15 +132,39 @@ document.getElementById('send-query').addEventListener('click', async function()
             throw new Error('Invalid Vega-Lite specification received. Please check your query.');
         }
 
-        renderChart(spec);
+        // Render the chart and then save it to chat history
+        await renderChart(spec, chatHistory);
     } catch (error) {
-        alert('Error generating the chart: ' + error.message);
+        const errorMessage = 'Error generating the chart: ' + error.message;
+        alert(errorMessage);
+        chatHistory.innerHTML += `<p><strong>System:</strong> ${errorMessage}</p>`;
+        chatHistory.scrollTop = chatHistory.scrollHeight;
     }
 });
 
 // Function to render the chart using Vega-Lite specification
-function renderChart(spec) {
-    vegaEmbed('#chart-container', spec)
-        .then(() => console.log('Chart rendered successfully'))
-        .catch(error => alert('Error rendering chart: ' + error.message));
+// Function to render the chart using Vega-Lite specification
+async function renderChart(spec, chatHistory) {
+    try {
+        // Render the chart
+        const { view } = await vegaEmbed('#chart-container', spec);
+
+        // Wait for the view to be fully rendered
+        await view.runAsync();
+
+        // Get the SVG as a string
+        const svgString = await view.toSVG();
+
+        // Create a Blob from the SVG string and generate a URL
+        const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+        const url = URL.createObjectURL(svgBlob);
+
+        // Append the chart image to the chat history
+        chatHistory.innerHTML += `<p><strong>System:</strong></p><img src="${url}" style="max-width: 100%;"/>`;
+        chatHistory.scrollTop = chatHistory.scrollHeight;
+
+        console.log('Chart rendered successfully');
+    } catch (error) {
+        alert('Error rendering chart: ' + error.message);
+    }
 }
