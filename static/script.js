@@ -1,5 +1,7 @@
 // Event listeners
-document.getElementById('csvFileInput').addEventListener('change', handleFileSelect, false);
+document.getElementById('csvFileInput').addEventListener('change', function() {
+    console.log('File input change detected');
+});
 document.getElementById('toggle-preview').addEventListener('click', togglePreview); // Event Listener for Toggle Button
 
 // Global dataset variable
@@ -8,6 +10,7 @@ let dataset = null;
 // Function to handle file selection and reading
 function handleFileSelect(event) {
     const file = event.target.files[0];
+    console.log('File selected:', file); // Check if file is being selected
     if (file.type !== 'text/csv') {
         document.getElementById('file-error').innerText = 'Please upload a valid CSV file.';
         return;
@@ -16,12 +19,21 @@ function handleFileSelect(event) {
 
     const reader = new FileReader();
     reader.onload = function(e) {
-        const csvData = d3.csvParse(e.target.result, d3.autoType);
-        dataset = csvData;
-        previewData(csvData);
+        console.log('File content:', e.target.result); // Check if file content is being read
+
+        // Try parsing CSV
+        try {
+            const csvData = d3.csvParse(e.target.result, d3.autoType);
+            console.log('Parsed CSV data:', csvData); // Check if CSV is parsed
+            dataset = csvData;
+            previewData(csvData);
+        } catch (error) {
+            console.error('Error parsing CSV:', error);
+        }
     };
     reader.readAsText(file);
 }
+
 
 // Function to preview the dataset in a table
 function previewData(data) {
