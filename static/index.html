@@ -11,13 +11,20 @@
     <script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
 </head>
 <body>
-    <h1>Data Visualization AI Assistant</h1>
+    <body>
+        <h1>Data Visualization AI Assistant</h1>
+    </body>
+    
     <div id="file-upload">
-        <input type="file" id="csvFileInput" accept=".csv" />
-        <p id="file-error" style="color: red;"></p>
-        <button id="toggle-preview">Show/Hide Table</button> <!-- Toggle Button -->
-        <div id="data-preview" style="display: block;"></div> <!-- Table container -->
+        <div id="dropzone">
+            <input type="file" id="csvFileInput" accept=".csv" style="display: none;" />
+            <p>Drag & Drop your CSV file here or click to upload.</p>
+            <p id="file-error" style="color: red;"></p>
+        </div>
+        <button id="toggle-preview">Show/Hide Table</button>
+        <div id="data-preview" style="display: block;"></div>
     </div>
+    
 
     <div id="chat-interface">
         <div id="chat-history"></div> <!-- Chat history will be appended here -->

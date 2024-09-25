@@ -1,15 +1,53 @@
-// Event listeners
-document.getElementById('csvFileInput').addEventListener('change', handleFileSelect);
-document.getElementById('toggle-preview').addEventListener('click', togglePreview); // Event Listener for Toggle Button
+document.getElementById('dropzone').addEventListener('click', () => {
+    document.getElementById('csvFileInput').click();
+});
 
-// Global dataset variable
-let dataset = null;
+const dropzone = document.getElementById('dropzone');
+const csvFileInput = document.getElementById('csvFileInput');
+
+// Variable to prevent double prompts
+let fileInputClicked = false;
+
+// Trigger file input click on dropzone click
+dropzone.addEventListener('click', () => {
+    if (!fileInputClicked) {
+        fileInputClicked = true; // Prevent multiple clicks
+        csvFileInput.click();  // Trigger the file input dialog
+        setTimeout(() => {
+            fileInputClicked = false; // Reset after a brief delay
+        }, 1000); // Adjust the delay as necessary
+    }
+});
+
+// Handle file selection via input
+csvFileInput.addEventListener('change', handleFileSelect);
+
+// Add event listeners for drag-and-drop functionality
+dropzone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropzone.classList.add('dragging');
+});
+
+dropzone.addEventListener('dragleave', (e) => {
+    e.preventDefault();
+    dropzone.classList.remove('dragging');
+});
+
+dropzone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropzone.classList.remove('dragging');
+
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+        const file = files[0];
+        handleFileSelect({ target: { files: [file] } }); // Use the same file handling logic
+    }
+});
 
 // Function to handle file selection and reading
 function handleFileSelect(event) {
-    const file = event.target.files[0];
-    console.log('File selected:', file); // Check if file is being selected
-    if (file.type !== 'text/csv') {
+    const file = event.target.files[0];  // Only handle the first file
+    if (!file || file.type !== 'text/csv') {
         document.getElementById('file-error').innerText = 'Please upload a valid CSV file.';
         return;
     }
@@ -17,23 +55,15 @@ function handleFileSelect(event) {
 
     const reader = new FileReader();
     reader.onload = function(e) {
-        console.log('File content:', e.target.result); // Check if file content is being read
-
-        // Try parsing CSV
-        try {
-            const csvData = d3.csvParse(e.target.result, d3.autoType);
-            console.log('Parsed CSV data:', csvData); // Check if CSV is parsed
-            dataset = csvData;
-            previewData(csvData);
-        } catch (error) {
-            console.error('Error parsing CSV:', error);
-        }
+        const csvData = d3.csvParse(e.target.result, d3.autoType);
+        dataset = csvData;
+        previewData(csvData);
     };
     reader.readAsText(file);
 }
 
 
-// Function to preview the dataset in a table
+
 function previewData(data) {
     const preview = document.getElementById('data-preview');
     preview.innerHTML = '';
@@ -70,15 +100,13 @@ function previewData(data) {
     }
 }
 
-// Function to toggle the display of the data preview
+document.getElementById('toggle-preview').addEventListener('click', togglePreview);
+
 function togglePreview() {
     const preview = document.getElementById('data-preview');
-    if (preview.style.display === 'none' || preview.style.display === '') {
-        preview.style.display = 'block';
-    } else {
-        preview.style.display = 'none';
-    }
+    preview.style.display = (preview.style.display === 'none' || preview.style.display === '') ? 'block' : 'none';
 }
+
 
 // Event listener for the 'Send' button to process the user query
 document.getElementById('send-query').addEventListener('click', async function() {
