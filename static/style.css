@@ -3,6 +3,11 @@ body {
     margin: 20px;
 }
 
+body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+}
+
 h1 {
     text-align: center;
 }
@@ -16,32 +21,13 @@ h1 {
     border: 1px solid #ddd;
     padding: 10px;
     max-height: 300px; /* Adjust this as needed for height */
-    overflow: hidden; /* Prevent content overflow */
+    overflow-y: auto; /* Enable vertical scrolling */
 }
 
 #data-preview table {
     width: 100%;
     border-collapse: collapse; /* Ensure borders between cells are clean */
-    table-layout: fixed; /* Ensures proper alignment */
     border: 1px solid #ccc; /* Add border around the entire table */
-}
-
-#data-preview thead {
-    display: table;
-    width: 100%;
-    table-layout: fixed;
-    position: sticky;
-    top: 0;
-    background-color: #f2f2f2; /* Color to differentiate header */
-    z-index: 1;
-    border-bottom: 2px solid #ddd; /* Add a thicker line under the header */
-}
-
-#data-preview tbody {
-    display: block;
-    max-height: 250px; /* Set scrollable area height */
-    overflow-y: auto;
-    width: 100%;
 }
 
 #data-preview th, #data-preview td {
@@ -49,9 +35,9 @@ h1 {
     text-align: left;
     border: 1px solid #ccc; /* Add borders between rows and columns */
     white-space: nowrap; /* Prevent wrapping of text */
-    overflow: show;
     text-overflow: ellipsis; /* Display ellipsis for long content */
 }
+
 
 #chat-interface {
     margin-top: 20px;

@@ -1,7 +1,5 @@
 // Event listeners
-document.getElementById('csvFileInput').addEventListener('change', function() {
-    console.log('File input change detected');
-});
+document.getElementById('csvFileInput').addEventListener('change', handleFileSelect);
 document.getElementById('toggle-preview').addEventListener('click', togglePreview); // Event Listener for Toggle Button
 
 // Global dataset variable
@@ -103,6 +101,7 @@ document.getElementById('send-query').addEventListener('click', async function()
 
     // Pre-check for question relevance
     const isRelevant = columns.some(col => query.toLowerCase().includes(col.toLowerCase()));
+
     if (!isRelevant) {
         const message = 'Your question does not seem to be related to the dataset columns. Please refine your question.';
         alert(message);
@@ -111,11 +110,17 @@ document.getElementById('send-query').addEventListener('click', async function()
         return;
     }
 
-    const prompt = `Generate a Vega-Lite specification for a chart based on the following dataset. 
-    Columns: ${columns.join(', ')}. 
-    Data types: ${dataTypes.join(', ')}.
-    Sample rows: ${JSON.stringify(dataset.slice(0, 3))}. 
-    User question: ${query}`;
+const threeQuartersIndex = Math.floor(dataset.length * (3 / 4));
+const datasetSubset = dataset.slice(0, threeQuartersIndex);
+const prompt = `Generate a valid Vega-Lite specification in JSON format for a chart based on the following dataset.
+Columns: ${columns.join(', ')}. 
+Data types: ${dataTypes.join(', ')}.
+Complete dataset: ${JSON.stringify(datasetSubset)}.
+User question: ${query}.
+Only return the Vega-Lite JSON specification, nothing else. Do not format the response as code (no triple quotes or backticks).
+Please include a detailed description in the Vega-lite description format, I need a description to be included in the proper format.
+Do not cut the response short.
+Ensure that the response fits the Vega-Lite Specifications]`;
 
     try {
         const response = await fetch('/query', {
@@ -125,16 +130,20 @@ document.getElementById('send-query').addEventListener('click', async function()
         });
 
         const result = await response.json();
+        console.log("Received Vega-Lite Spec: ", result.response);
+        console.log("Length of response: ", result.response.length);
+        
 
         // Check if the response is empty or undefined
         if (!result || !result.response) {
             throw new Error('Received an empty or invalid response from the server.');
         }
-
+        let responseText = result.response.trim();
+        responseText = responseText.replace(/```json/g, '').replace(/```/g, '');
         // Parse the received Vega-Lite specification
         let spec;
         try {
-            spec = JSON.parse(result.response);
+            spec = JSON.parse(responseText);
         } catch (e) {
             throw new Error('Received an invalid JSON for the chart specification.');
         }
@@ -145,7 +154,11 @@ document.getElementById('send-query').addEventListener('click', async function()
         }
 
         // Render the chart and then save it to chat history
+        const description = spec.description || "No description provided.";
+
         await renderChart(spec, chatHistory);
+        chatHistory.innerHTML += `<p><strong>Description:</strong> ${description}</p>`;
+        chatHistory.scrollTop = chatHistory.scrollHeight;
     } catch (error) {
         const errorMessage = 'Error generating the chart: ' + error.message;
         alert(errorMessage);
