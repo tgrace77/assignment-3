@@ -1,0 +1,94 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+}
+
+h1 {
+    text-align: center;
+}
+
+#data-preview {
+    margin-top: 10px;
+    border: 1px solid #ddd;
+    padding: 10px;
+    max-height: 300px; /* Adjust this as needed for height */
+    overflow-y: auto; /* Enable vertical scrolling */
+}
+
+#data-preview table {
+    width: 100%;
+    border-collapse: collapse; /* Ensure borders between cells are clean */
+    border: 1px solid #ccc; /* Add border around the entire table */
+}
+
+#data-preview th, #data-preview td {
+    padding: 10px; /* Add some padding for better readability */
+    text-align: left;
+    border: 1px solid #ccc; /* Add borders between rows and columns */
+    white-space: nowrap; /* Prevent wrapping of text */
+    text-overflow: ellipsis; /* Display ellipsis for long content */
+}
+
+#csvFileInput {
+    position: absolute;        /* Remove it from the normal document flow */
+    left: 0;                   /* Ensure it's positioned in the top left */
+    top: 0;
+    width: 100%;               /* Cover the full area of the dropzone */
+    height: 100%;              /* Cover the full height of the dropzone */
+    opacity: 0;                /* Keep it invisible but functional */
+    z-index: -1;               /* Ensure it’s below other elements */
+    cursor: pointer;           /* Allow it to be interactable via click */
+}
+
+#chat-interface {
+    margin-top: 20px;
+}
+
+#chat-history {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    padding: 10px;
+    margin-bottom: 10px;
+    background-color: #f9f9f9;
+}
+
+#user-query {
+    width: 100%;
+    height: 100px;
+    margin-bottom: 10px;
+}
+
+#send-query {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    background-color: #007BFF;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+#send-query:hover {
+    background-color: #0056b3;
+}
+
+#chart-container {
+    margin-top: 20px;
+}
+
+#dropzone {
+    width: 100%;               /* Allow it to take the full width */
+    max-width: 800px;           /* Set a max-width to limit stretching */
+    padding: 40px;
+    border: 2px dashed #007BFF;
+    text-align: center;
+    background-color: #f9f9f9;
+    margin: 20px auto;          /* Center it with equal margins on top/bottom and auto for left/right */
+    position: relative;         /* Ensure child elements like file input can be absolutely positioned */
+    cursor: pointer;
+}
+
+#dropzone p {
+    pointer-events: none;       /* Ensure the text doesn’t interfere with click events */
+}
