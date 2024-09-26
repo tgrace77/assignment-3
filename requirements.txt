@@ -4,5 +4,4 @@ fastapi
 starlette
 pydantic
 openai
-os
 dotenv
