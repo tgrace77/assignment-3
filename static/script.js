@@ -44,6 +44,8 @@ dropzone.addEventListener('drop', (e) => {
     }
 });
 
+let dataset = null; // Ensure dataset is initialized
+
 // Function to handle file selection and reading
 function handleFileSelect(event) {
     const file = event.target.files[0];  // Only handle the first file
@@ -58,10 +60,19 @@ function handleFileSelect(event) {
         const csvData = d3.csvParse(e.target.result, d3.autoType);
         dataset = csvData;
         previewData(csvData);
+
+        // **Reset the chat history and chart when a new dataset is loaded**
+        resetChatAndChart();
     };
     reader.readAsText(file);
 }
+function resetChatAndChart() {
+    const chatHistory = document.getElementById('chat-history');
+    chatHistory.innerHTML = '';
 
+    const chartContainer = document.getElementById('chart-container');
+    chartContainer.innerHTML = '';
+}
 
 
 function previewData(data) {
@@ -107,6 +118,10 @@ function togglePreview() {
     preview.style.display = (preview.style.display === 'none' || preview.style.display === '') ? 'block' : 'none';
 }
 
+document.getElementById('clear-messages').addEventListener('click', function() {
+    const chatHistory = document.getElementById('chat-history');
+    chatHistory.innerHTML = '';
+});
 
 // Event listener for the 'Send' button to process the user query
 // Existing event listener for the 'Send' button
@@ -138,7 +153,11 @@ document.getElementById('send-query').addEventListener('click', async function()
         chatHistory.scrollTop = chatHistory.scrollHeight;
         return;
     }
+    // **Show the loading spinner**
+    document.getElementById('loading-spinner').style.display = 'block';
 
+    // **Disable the Send button to prevent multiple submissions**
+    document.getElementById('send-query').disabled = true;
     // **Use the whole dataset**
     const datasetSubset = dataset;  // Use the entire dataset
 
@@ -252,23 +271,37 @@ Vega-Lite specification: ${ex.vegaSpec}.`;
         await renderChart(spec, chatHistory);
         chatHistory.innerHTML += `<p><strong>Description:</strong> ${description}</p>`;
         chatHistory.scrollTop = chatHistory.scrollHeight;
+
+        document.getElementById('loading-spinner').style.display = 'none';
+
+        // **Re-enable the Send button**
+        document.getElementById('send-query').disabled = false;
+
+        // **Ensure chat history auto-scrolls**
+        chatHistory.scrollTop = chatHistory.scrollHeight;
     } catch (error) {
         const errorMessage = 'Error generating the chart: ' + error.message;
         alert(errorMessage);
         chatHistory.innerHTML += `<p><strong>System:</strong> ${errorMessage}</p>`;
         chatHistory.scrollTop = chatHistory.scrollHeight;
+
+        document.getElementById('loading-spinner').style.display = 'none';
+
+        // **Re-enable the Send button**
+        document.getElementById('send-query').disabled = false;
     }
 });
 
 // Function to render the chart using Vega-Lite specification remains unchanged
-// Function to render the chart using Vega-Lite specification
+
 async function renderChart(spec, chatHistory) {
     try {
         // Assign the actual data to the Vega-Lite spec
         spec.data = { values: dataset };
-        
+
         // Render the chart
         const { view } = await vegaEmbed('#chart-container', spec);
+
         // Wait for the view to be fully rendered
         await view.runAsync();
 

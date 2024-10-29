@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Data Visualization AI Assistant</title>
+    <title>Data Analysis AI Assistant</title>
     <link rel="stylesheet" href="/static/style.css">
     <script src="https://d3js.org/d3.v6.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
@@ -11,9 +11,7 @@
     <script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
 </head>
 <body>
-    <body>
-        <h1>Data Visualization AI Assistant</h1>
-    </body>
+    <h1>Data Visualization AI Assistant</h1>
     
     <div id="file-upload">
         <div id="dropzone">
@@ -24,12 +22,22 @@
         <button id="toggle-preview">Show/Hide Table</button>
         <div id="data-preview" style="display: block;"></div>
     </div>
-    
+
+    <!-- Loading Spinner -->
+    <div id="loading-spinner" style="display: none;">
+        <!-- SVG Spinner -->
+        <svg width="50px" height="50px" viewBox="0 0 100 100" fill="#ffffff">
+            <circle cx="50" cy="50" r="35" stroke="#007BFF" stroke-width="10" fill="none" stroke-dasharray="164.93361431346415 56.97787143782138">
+                <animateTransform attributeName="transform" type="rotate" repeatCount="indefinite" dur="1s" values="0 50 50;360 50 50" keyTimes="0;1"></animateTransform>
+            </circle>
+        </svg>
+    </div>
 
     <div id="chat-interface">
         <div id="chat-history"></div> <!-- Chat history will be appended here -->
         <textarea id="user-query" placeholder="Ask a question about the dataset..."></textarea>
         <button id="send-query">Send</button>
+        <button id="clear-messages">Clear Messages</button> <!-- Added Clear Messages button -->
     </div>
 
     <div id="chart-container"></div> <!-- For charts -->
