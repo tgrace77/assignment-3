@@ -92,3 +92,35 @@ h1 {
 #dropzone p {
     pointer-events: none;       /* Ensure the text doesn’t interfere with click events */
 }
+
+#loading-spinner {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 20px 0;
+}
+
+#loading-spinner svg {
+    animation: rotate 1s linear infinite;
+}
+
+@keyframes rotate {
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* Improved chat history appearance */
+#chat-history p {
+    margin: 5px 0;
+}
+
+#chat-history strong {
+    color: #007BFF;
+}
+
+/* Disabled Send button style */
+#send-query:disabled {
+    background-color: #6c757d;
+    cursor: not-allowed;
+}
