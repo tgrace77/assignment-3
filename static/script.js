@@ -109,6 +109,7 @@ function togglePreview() {
 
 
 // Event listener for the 'Send' button to process the user query
+// Existing event listener for the 'Send' button
 document.getElementById('send-query').addEventListener('click', async function() {
     const query = document.getElementById('user-query').value;
     const chatHistory = document.getElementById('chat-history');
@@ -138,17 +139,76 @@ document.getElementById('send-query').addEventListener('click', async function()
         return;
     }
 
-const threeQuartersIndex = Math.floor(dataset.length * (3 / 4));
-const datasetSubset = dataset.slice(0, threeQuartersIndex);
-const prompt = `Generate a valid Vega-Lite specification in JSON format for a chart based on the following dataset.
-Columns: ${columns.join(', ')}. 
-Data types: ${dataTypes.join(', ')}.
-Complete dataset: ${JSON.stringify(datasetSubset)}.
-User question: ${query}.
-Only return the Vega-Lite JSON specification, nothing else. Do not format the response as code (no triple quotes or backticks).
-Please include a detailed description in the Vega-lite description format, I need a description to be included in the proper format.
-Do not cut the response short.
-Ensure that the response fits the Vega-Lite Specifications]`;
+    // **Use the whole dataset**
+    const datasetSubset = dataset;  // Use the entire dataset
+
+    // **Incorporate few-shot learning into the prompt with descriptions**
+    const fewShotExamples = [
+        {
+            columns: 'Age, Height, Weight',
+            dataTypes: 'number, number, number',
+            userQuestion: 'Plot Height versus Age',
+            vegaSpec: `{
+      "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+      "description": "A scatter plot showing the relationship between Age and Height.",
+      "data": {
+        "name": "dataset"
+      },
+      "mark": "point",
+      "encoding": {
+        "x": {"field": "Age", "type": "quantitative"},
+        "y": {"field": "Height", "type": "quantitative"}
+      }
+    }`
+        },
+        {
+            columns: 'Country, Population, GDP',
+            dataTypes: 'string, number, number',
+            userQuestion: 'Show a bar chart of Population by Country',
+            vegaSpec: `{
+      "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+      "description": "A bar chart displaying the population of each country.",
+      "data": {
+        "name": "dataset"
+      },
+      "mark": "bar",
+      "encoding": {
+        "x": {"field": "Country", "type": "nominal"},
+        "y": {"field": "Population", "type": "quantitative"}
+      }
+    }`
+        }
+    ];
+
+    function generateFewShotPrompt(examples) {
+        return examples.map((ex, idx) => {
+            return `Example ${idx + 1}:
+Columns: ${ex.columns}.
+Data types: ${ex.dataTypes}.
+Complete dataset: ${ex.dataset}.
+User question: ${ex.userQuestion}.
+Vega-Lite specification: ${ex.vegaSpec}.`;
+        }).join('\n\n');
+    }
+
+    const fewShotPrompt = generateFewShotPrompt(fewShotExamples);
+
+    // **Construct the new prompt emphasizing the description field**
+    const prompt = `${fewShotPrompt}
+
+    Now, based on the following columns, data types, and user question, generate a valid Vega-Lite specification in JSON format for a chart.
+    
+    Columns: ${columns.join(', ')}.
+    Data types: ${dataTypes.join(', ')}.
+    User question: ${query}.
+    Your Vega-Lite specification must:
+    
+    - Include a detailed 'description' field explaining the chart.
+    - Use 'data': {'name': 'dataset'} to refer to the dataset.
+    - Be valid JSON without syntax errors (no trailing commas, correct use of braces and brackets).
+    - Only return the Vega-Lite JSON specification, nothing else. Do not format the response as code (no triple quotes or backticks).
+    - Ensure that the response fits the Vega-Lite Specifications.
+    `;
 
     try {
         const response = await fetch('/query', {
@@ -161,13 +221,13 @@ Ensure that the response fits the Vega-Lite Specifications]`;
         console.log("Received Vega-Lite Spec: ", result.response);
         console.log("Length of response: ", result.response.length);
         
-
         // Check if the response is empty or undefined
         if (!result || !result.response) {
             throw new Error('Received an empty or invalid response from the server.');
         }
         let responseText = result.response.trim();
         responseText = responseText.replace(/```json/g, '').replace(/```/g, '');
+        responseText = responseText.replace(/,\s*([\]}])/g, '$1');
         // Parse the received Vega-Lite specification
         let spec;
         try {
@@ -176,13 +236,18 @@ Ensure that the response fits the Vega-Lite Specifications]`;
             throw new Error('Received an invalid JSON for the chart specification.');
         }
 
+        // **Check if the 'description' field is present**
+        if (!spec.description) {
+            throw new Error('The Vega-Lite specification is missing the "description" field.');
+        }
+
         // Validate the Vega-Lite specification before rendering
         if (!spec.data || !spec.mark || !spec.encoding) {
             throw new Error('Invalid Vega-Lite specification received. Please check your query.');
         }
 
         // Render the chart and then save it to chat history
-        const description = spec.description || "No description provided.";
+        const description = spec.description;
 
         await renderChart(spec, chatHistory);
         chatHistory.innerHTML += `<p><strong>Description:</strong> ${description}</p>`;
@@ -195,13 +260,15 @@ Ensure that the response fits the Vega-Lite Specifications]`;
     }
 });
 
-// Function to render the chart using Vega-Lite specification
+// Function to render the chart using Vega-Lite specification remains unchanged
 // Function to render the chart using Vega-Lite specification
 async function renderChart(spec, chatHistory) {
     try {
+        // Assign the actual data to the Vega-Lite spec
+        spec.data = { values: dataset };
+        
         // Render the chart
         const { view } = await vegaEmbed('#chart-container', spec);
-
         // Wait for the view to be fully rendered
         await view.runAsync();
 
