@@ -1,21 +1,14 @@
 const BACKEND_URL = 'https://assignment-3-1plq.onrender.com'; // Replace with your actual back-end URL
 
 function extractJSON(responseText) {
-    // Regular expression to match JSON code blocks
-    const jsonRegex = /```json([\s\S]*?)```/;
-    const match = responseText.match(jsonRegex);
-    if (match && match[1]) {
-        return match[1].trim();
-    } else {
-        // Try to find any JSON in the text
-        const jsonStart = responseText.indexOf('{');
-        const jsonEnd = responseText.lastIndexOf('}');
-        if (jsonStart !== -1 && jsonEnd !== -1 && jsonStart < jsonEnd) {
-            return responseText.substring(jsonStart, jsonEnd + 1).trim();
-        }
-    }
-    return null;
+    // Regular expression to match all JSON code blocks
+    const jsonRegex = /```json([\s\S]*?)```/g;
+    const matches = [...responseText.matchAll(jsonRegex)];
+    const jsonSpecs = matches.map(match => match[1].trim());
+    return jsonSpecs || [];
 }
+
+
 document.getElementById('dropzone').addEventListener('click', () => {
     document.getElementById('csvFileInput').click();
 });
@@ -77,7 +70,7 @@ function handleFileSelect(event) {
     const formData = new FormData();
     formData.append('file', file);
 
- // **Updated fetch request with full back-end URL**
+    // Upload the file to the backend
     fetch(`${BACKEND_URL}/upload-dataset`, {
         method: 'POST',
         body: formData
@@ -163,6 +156,9 @@ document.getElementById('clear-messages').addEventListener('click', function() {
     chatHistory.innerHTML = '';
 });
 
+// Event listener for the 'Send' button to process the user query
+// Existing event listener for the 'Send' button
+// Function to send user query
 async function sendUserQuery() {
     const queryInput = document.getElementById('user-query');
     const query = queryInput.value.trim();
@@ -195,6 +191,7 @@ async function sendUserQuery() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ question: query })
         });
+
         const result = await response.json();
         console.log("Server response:", result);
 
@@ -204,25 +201,29 @@ async function sendUserQuery() {
 
         const responseText = result.response.trim();
 
-        let specText = extractJSON(responseText);
+        let specTexts = extractJSON(responseText);
 
-    if (specText) {
-        // Parse and render the chart
-        let spec;
-        try {
-            spec = JSON.parse(specText);
-            await renderChart(spec, chatHistory);
-        } catch (e) {
-            console.error('Error parsing JSON:', e);
-            chatHistory.innerHTML += `<p><strong>Assistant:</strong> Error parsing the chart specification.</p>`;
+        if (specTexts && specTexts.length > 0) {
+            // Loop through each JSON spec and render the chart
+            for (let specText of specTexts) {
+                let spec;
+                try {
+                    spec = JSON.parse(specText);
+                    await renderChart(spec, chatHistory);
+                } catch (e) {
+                    console.error('Error parsing JSON:', e);
+                    chatHistory.innerHTML += `<p><strong>Assistant:</strong> Error parsing the chart specification.</p>`;
+                    chatHistory.scrollTop = chatHistory.scrollHeight;
+                }
+            }
+        }
+    
+        // Append the assistant's response excluding the JSON code blocks
+        const textWithoutJSON = responseText.replace(/```json[\s\S]*?```/g, '').trim();
+        if (textWithoutJSON) {
+            chatHistory.innerHTML += `<p><strong>Assistant:</strong> ${textWithoutJSON}</p>`;
             chatHistory.scrollTop = chatHistory.scrollHeight;
         }
-    } else {
-        // Treat as plain text
-        chatHistory.innerHTML += `<p><strong>Assistant:</strong> ${responseText}</p>`;
-        chatHistory.scrollTop = chatHistory.scrollHeight;
-    }
-
         document.getElementById('loading-spinner').style.display = 'none';
         document.getElementById('send-query').disabled = false;
     } catch (error) {
@@ -244,7 +245,6 @@ document.getElementById('user-query').addEventListener('keydown', function(event
         sendUserQuery();
     }
 });
-
 
 // Function to render the chart using Vega-Lite specification remains unchanged
 async function renderChart(spec, chatHistory) {
