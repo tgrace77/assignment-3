@@ -3,4 +3,5 @@ fastapi
 uvicorn
 openai
 pandas
+python-multipart
 
