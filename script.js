@@ -1,3 +1,20 @@
+
+function extractJSON(responseText) {
+    // Regular expression to match JSON code blocks
+    const jsonRegex = /```json([\s\S]*?)```/;
+    const match = responseText.match(jsonRegex);
+    if (match && match[1]) {
+        return match[1].trim();
+    } else {
+        // Try to find any JSON in the text
+        const jsonStart = responseText.indexOf('{');
+        const jsonEnd = responseText.lastIndexOf('}');
+        if (jsonStart !== -1 && jsonEnd !== -1 && jsonStart < jsonEnd) {
+            return responseText.substring(jsonStart, jsonEnd + 1).trim();
+        }
+    }
+    return null;
+}
 document.getElementById('dropzone').addEventListener('click', () => {
     document.getElementById('csvFileInput').click();
 });
@@ -44,24 +61,57 @@ dropzone.addEventListener('drop', (e) => {
     }
 });
 
+let dataset = null; // Ensure dataset is initialized
+
 // Function to handle file selection and reading
 function handleFileSelect(event) {
     const file = event.target.files[0];  // Only handle the first file
-    if (!file || file.type !== 'text/csv') {
+    if (!file) {
         document.getElementById('file-error').innerText = 'Please upload a valid CSV file.';
         return;
     }
     document.getElementById('file-error').innerText = '';
 
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const csvData = d3.csvParse(e.target.result, d3.autoType);
-        dataset = csvData;
-        previewData(csvData);
-    };
-    reader.readAsText(file);
+    // Create FormData to send the file
+    const formData = new FormData();
+    formData.append('file', file);
+
+    // Upload the file to the backend
+    fetch('/upload-dataset', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.error) {
+            document.getElementById('file-error').innerText = result.error;
+            return;
+        }
+        // Read the file locally for preview
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const csvData = d3.csvParse(e.target.result, d3.autoType);
+            dataset = csvData;
+            previewData(csvData);
+
+            // Reset the chat history and chart when a new dataset is loaded
+            resetChatAndChart();
+        };
+        reader.readAsText(file);
+    })
+    .catch(error => {
+        console.error('Error uploading file:', error);
+        document.getElementById('file-error').innerText = 'Error uploading file.';
+    });
 }
 
+function resetChatAndChart() {
+    const chatHistory = document.getElementById('chat-history');
+    chatHistory.innerHTML = '';
+
+    const chartContainer = document.getElementById('chart-container');
+    chartContainer.innerHTML = '';
+}
 
 
 function previewData(data) {
@@ -107,8 +157,13 @@ function togglePreview() {
     preview.style.display = (preview.style.display === 'none' || preview.style.display === '') ? 'block' : 'none';
 }
 
+document.getElementById('clear-messages').addEventListener('click', function() {
+    const chatHistory = document.getElementById('chat-history');
+    chatHistory.innerHTML = '';
+});
 
 // Event listener for the 'Send' button to process the user query
+// Existing event listener for the 'Send' button
 document.getElementById('send-query').addEventListener('click', async function() {
     const query = document.getElementById('user-query').value;
     const chatHistory = document.getElementById('chat-history');
@@ -124,81 +179,71 @@ document.getElementById('send-query').addEventListener('click', async function()
         return;
     }
 
-    const columns = Object.keys(dataset[0]);
-    const dataTypes = columns.map(key => typeof dataset[0][key]);
-
-    // Pre-check for question relevance
-    const isRelevant = columns.some(col => query.toLowerCase().includes(col.toLowerCase()));
-
-    if (!isRelevant) {
-        const message = 'Your question does not seem to be related to the dataset columns. Please refine your question.';
-        alert(message);
-        chatHistory.innerHTML += `<p><strong>System:</strong> ${message}</p>`;
-        chatHistory.scrollTop = chatHistory.scrollHeight;
-        return;
-    }
-
-const threeQuartersIndex = Math.floor(dataset.length * (3 / 4));
-const datasetSubset = dataset.slice(0, threeQuartersIndex);
-const prompt = `Generate a valid Vega-Lite specification in JSON format for a chart based on the following dataset.
-Columns: ${columns.join(', ')}. 
-Data types: ${dataTypes.join(', ')}.
-Complete dataset: ${JSON.stringify(datasetSubset)}.
-User question: ${query}.
-Only return the Vega-Lite JSON specification, nothing else. Do not format the response as code (no triple quotes or backticks).
-Please include a detailed description in the Vega-lite description format, I need a description to be included in the proper format.
-Do not cut the response short.
-Ensure that the response fits the Vega-Lite Specifications]`;
+    // Show the loading spinner
+    document.getElementById('loading-spinner').style.display = 'block';
 
     try {
         const response = await fetch('/query', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt })
+            body: JSON.stringify({ question: query })
         });
 
         const result = await response.json();
-        console.log("Received Vega-Lite Spec: ", result.response);
-        console.log("Length of response: ", result.response.length);
-        
+        console.log("Server response:", result);
 
-        // Check if the response is empty or undefined
-        if (!result || !result.response) {
-            throw new Error('Received an empty or invalid response from the server.');
+        if (!result || typeof result.response !== 'string') {
+            throw new Error('Invalid response from server.');
         }
-        let responseText = result.response.trim();
-        responseText = responseText.replace(/```json/g, '').replace(/```/g, '');
-        // Parse the received Vega-Lite specification
+
+        const responseText = result.response.trim();
+
+        let specText = extractJSON(responseText);
+
+    if (specText) {
+        // Parse and render the chart
         let spec;
         try {
-            spec = JSON.parse(responseText);
+            spec = JSON.parse(specText);
+            await renderChart(spec, chatHistory);
         } catch (e) {
-            throw new Error('Received an invalid JSON for the chart specification.');
+            console.error('Error parsing JSON:', e);
+            chatHistory.innerHTML += `<p><strong>Assistant:</strong> Error parsing the chart specification.</p>`;
+            chatHistory.scrollTop = chatHistory.scrollHeight;
         }
-
-        // Validate the Vega-Lite specification before rendering
-        if (!spec.data || !spec.mark || !spec.encoding) {
-            throw new Error('Invalid Vega-Lite specification received. Please check your query.');
-        }
-
-        // Render the chart and then save it to chat history
-        const description = spec.description || "No description provided.";
-
-        await renderChart(spec, chatHistory);
-        chatHistory.innerHTML += `<p><strong>Description:</strong> ${description}</p>`;
+    } else {
+        // Treat as plain text
+        chatHistory.innerHTML += `<p><strong>Assistant:</strong> ${responseText}</p>`;
         chatHistory.scrollTop = chatHistory.scrollHeight;
+    }
+
+        document.getElementById('loading-spinner').style.display = 'none';
+        document.getElementById('send-query').disabled = false;
     } catch (error) {
-        const errorMessage = 'Error generating the chart: ' + error.message;
+        const errorMessage = 'Error: ' + error.message;
         alert(errorMessage);
         chatHistory.innerHTML += `<p><strong>System:</strong> ${errorMessage}</p>`;
         chatHistory.scrollTop = chatHistory.scrollHeight;
+
+        document.getElementById('loading-spinner').style.display = 'none';
+        document.getElementById('send-query').disabled = false;
     }
 });
 
-// Function to render the chart using Vega-Lite specification
-// Function to render the chart using Vega-Lite specification
+
+// Function to render the chart using Vega-Lite specification remains unchanged
 async function renderChart(spec, chatHistory) {
     try {
+        // spec is already an object, no need to parse
+
+        // Assign the actual data to the Vega-Lite spec
+        spec.data = { values: dataset };
+
+        // Ensure the schema is set correctly
+        if (!spec.$schema) {
+            spec.$schema = "https://vega.github.io/schema/vega-lite/v5.json";
+        }
+
         // Render the chart
         const { view } = await vegaEmbed('#chart-container', spec);
 
@@ -213,11 +258,13 @@ async function renderChart(spec, chatHistory) {
         const url = URL.createObjectURL(svgBlob);
 
         // Append the chart image to the chat history
-        chatHistory.innerHTML += `<p><strong>System:</strong></p><img src="${url}" style="max-width: 100%;"/>`;
+        chatHistory.innerHTML += `<p><strong>Assistant:</strong></p><img src="${url}" style="max-width: 100%;"/>`;
         chatHistory.scrollTop = chatHistory.scrollHeight;
 
         console.log('Chart rendered successfully');
     } catch (error) {
+        console.error('Error rendering chart:', error);
         alert('Error rendering chart: ' + error.message);
+        chatHistory.innerHTML += `<p><strong>Assistant:</strong> Error rendering chart.</p>`;
     }
 }
