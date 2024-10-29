@@ -1,3 +1,5 @@
+const BACKEND_URL = 'https://assignment-3-1plq.onrender.com'; // Replace with your actual back-end URL
+
 function extractJSON(responseText) {
     // Regular expression to match JSON code blocks
     const jsonRegex = /```json([\s\S]*?)```/;
@@ -75,8 +77,8 @@ function handleFileSelect(event) {
     const formData = new FormData();
     formData.append('file', file);
 
-    // Upload the file to the backend
-    fetch('/upload-dataset', {
+ // **Updated fetch request with full back-end URL**
+    fetch(`${BACKEND_URL}/upload-dataset`, {
         method: 'POST',
         body: formData
     })
@@ -182,12 +184,11 @@ document.getElementById('send-query').addEventListener('click', async function()
     document.getElementById('loading-spinner').style.display = 'block';
 
     try {
-        const response = await fetch('/query', {
+        const response = await fetch(`${BACKEND_URL}/query`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ question: query })
         });
-
         const result = await response.json();
         console.log("Server response:", result);
 
