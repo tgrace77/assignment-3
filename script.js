@@ -1,4 +1,3 @@
-
 function extractJSON(responseText) {
     // Regular expression to match JSON code blocks
     const jsonRegex = /```json([\s\S]*?)```/;
@@ -268,3 +267,4 @@ async function renderChart(spec, chatHistory) {
         chatHistory.innerHTML += `<p><strong>Assistant:</strong> Error rendering chart.</p>`;
     }
 }
+
