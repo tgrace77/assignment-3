@@ -163,13 +163,22 @@ document.getElementById('clear-messages').addEventListener('click', function() {
 
 // Event listener for the 'Send' button to process the user query
 // Existing event listener for the 'Send' button
-document.getElementById('send-query').addEventListener('click', async function() {
-    const query = document.getElementById('user-query').value;
+// Function to send user query
+async function sendUserQuery() {
+    const queryInput = document.getElementById('user-query');
+    const query = queryInput.value.trim();
     const chatHistory = document.getElementById('chat-history');
+
+    if (query === '') {
+        return; // Do nothing if the input is empty
+    }
 
     // Append user query to chat history
     chatHistory.innerHTML += `<p><strong>User:</strong> ${query}</p>`;
     chatHistory.scrollTop = chatHistory.scrollHeight;
+
+    // Clear the input field
+    queryInput.value = '';
 
     if (!dataset) {
         alert('Please upload a dataset first.');
@@ -227,8 +236,16 @@ document.getElementById('send-query').addEventListener('click', async function()
         document.getElementById('loading-spinner').style.display = 'none';
         document.getElementById('send-query').disabled = false;
     }
-});
+}
+document.getElementById('send-query').addEventListener('click', sendUserQuery);
 
+// Event listener for pressing 'Enter' key in the input field
+document.getElementById('user-query').addEventListener('keydown', function(event) {
+    if (event.key === 'Enter') {
+        event.preventDefault(); // Prevent the default action
+        sendUserQuery();
+    }
+});
 
 // Function to render the chart using Vega-Lite specification remains unchanged
 async function renderChart(spec, chatHistory) {
