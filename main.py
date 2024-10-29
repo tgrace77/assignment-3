@@ -221,18 +221,21 @@ tools = [execute_pandas_code_tool, generate_vega_lite_spec_tool]
 system_prompt = """
 You are a data assistant capable of performing data analysis and generating charts based on a dataset. The dataset is loaded as a pandas DataFrame named 'df'.
 
-- For data analysis queries (e.g., calculating averages, medians, filtering data), use the 'execute_pandas_code' tool. Write Python code using 'df' and print the result using 'print()'.
+- For data analysis queries (e.g., calculating averages, medians, filtering data), use the 'execute_pandas_code' tool. Write Python code using 'df' and **print the result using 'print()'**.
 
 - For chart or visualization requests, use the 'generate_vega_lite_spec' tool to create a Vega-Lite JSON specification.
 
-Important Guidelines:
+**Important Guidelines:**
 
-- Always use 'print()' to output the result when using 'execute_pandas_code'.
-- When generating a Vega-Lite JSON specification, include the JSON in your final answer.
-- When generating a Vega-Lite JSON specification, include only the JSON in your final answer without any additional text or explanations.
-- Do not mention the usage of tools to the user.
+- **Always include the outputs from any function calls in your final answer to the user, properly formatted.**
+- When performing data analysis, present the results clearly.
+- When generating a Vega-Lite JSON specification, include the JSON in your final answer, enclosed within triple backticks and 'json' syntax highlighting, like ```json ... ```.
+- If the user asks for both data analysis and a chart, include both in your final answer.
+- Do not mention any internal implementation details or that you used tools.
 - Provide clear and concise answers to the user's queries.
+- The final answer should be suitable for the user to read, and the JSON code blocks should be properly formatted for extraction.
 """
+
 
 
 
@@ -245,16 +248,17 @@ def query(question, system_prompt, tools, tool_map):
         dataset_info = "The dataset is not available. Please upload a dataset."
 
     # Insert dataset_info into the system prompt
-    system_prompt = system_prompt + "\n\n" + dataset_info
+    system_prompt += "\n\n" + dataset_info
 
     messages = [{"role": "system", "content": system_prompt}]
     messages.append({"role": "user", "content": question})
+
     while True:
         # Send the conversation to the model with tools
         response = client.chat.completions.create(
-            model="gpt-4",  # Specify your model
+            model="gpt-4",
             messages=messages,
-            functions=tools,  # Add tool definitions here
+            functions=tools,  # Tool definitions
             function_call="auto"  # Let the model decide when to call a function
         )
 
@@ -278,16 +282,20 @@ def query(question, system_prompt, tools, tool_map):
 
             # Get the corresponding function from the tool_map
             function_to_call = tool_map.get(function_name)
-            if function_to_call is None:
+            if not function_to_call:
                 return f"Function '{function_name}' not found."
 
             # Call the function with the extracted arguments
             function_result = function_to_call(**arguments)
+
             # Append the assistant's response to the messages
             messages.append({
                 "role": "assistant",
                 "content": None,
-                "function_call": function_call
+                "function_call": {
+                    "name": function_name,
+                    "arguments": arguments_str
+                }
             })
 
             # Append the function's output to the conversation
@@ -296,11 +304,13 @@ def query(question, system_prompt, tools, tool_map):
                 "name": function_name,
                 "content": function_result
             })
+
+            # Continue the loop to let the assistant incorporate the function result
+            continue
         else:
             # No function call, return the assistant's final answer
-            messages.append(response_message)
+            messages.append({"role": "assistant", "content": response_message.content})
             return response_message.content
-
 
 # In your /query endpoint
 @app.post("/query", response_model=QueryResponse)
